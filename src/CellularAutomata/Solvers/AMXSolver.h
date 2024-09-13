@@ -4,11 +4,30 @@
 #include "CellularAutomata/Solvers/CASolver.h"
 #include "Memory/CADataDomain.h"
 #include "Memory/CAStateGenerator.h"
-#include <immintrin.h>
 
+#include <immintrin.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <stdbool.h>
+
+
+//Define tile config data structure
+typedef struct __tile_config
+{
+  uint8_t palette_id;
+  uint8_t start_row;
+  uint8_t reserved_0[14];
+  uint16_t colsb[16];
+  uint8_t rows[16];
+} __tilecfg;
 
 class AMXSolver : public CASolver {
    private:
+
+    __tilecfg *tile_config;
 
     uint8_t pi_1[16*64];
     uint8_t pi_2[16*64];

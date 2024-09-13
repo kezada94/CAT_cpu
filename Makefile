@@ -62,10 +62,10 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.cpp
 	$(CC) $(CCDEFINES) $(CCOBJFLAGS) $(GLOBALDEFINES) $(DBGDEFINES) -c -o $@ $<
 
 $(TARGET): $(OBJ) $(CUDA_OBJ)
-	$(CC) -o $@ $(OBJ) $(CUDA_OBJ)
+	$(CC) $(CCOBJFLAGS) -o $@ $(OBJ) $(CUDA_OBJ)
 
 $(TARGET_DEBUG) : $(DBG_OBJ) $(DBG_CUDA_OBJ)
-	$(CC) -o $@ $(DBG_OBJ) $(DBG_CUDA_OBJ)
+	$(CC) $(CCOBJFLAGS) -o $@ $(DBG_OBJ) $(DBG_CUDA_OBJ)
 
 
 # phony rules

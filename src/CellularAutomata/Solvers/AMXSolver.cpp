@@ -17,8 +17,7 @@ AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domai
 }
 
 void AMXSolver::setupAMX() {
-    __tilecfg tile_config;
-
+    tile_config = new __tilecfg();
     tile_config->palette_id = 1;
     tile_config->start_row = 0;
 
@@ -98,6 +97,7 @@ void AMXSolver::fillTridiag() {
 }
 
 void AMXSolver::copyCurrentStateToHostVisibleData() {
+	lDebug(1, "%llu\n", dataDomain->getTotalSize());
     for (int i = 0; i < dataDomain->getTotalSize(); ++i) {
         uint8_t value = dataDomain->getElementAt(i);
         hostVisibleData->setElementAt(i, (int)value);
