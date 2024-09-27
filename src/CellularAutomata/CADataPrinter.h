@@ -8,6 +8,7 @@
 class CADataPrinter {
    public:
     static void printCADataWithHalo(CADataDomain<int>* data) {
+	lDebug(1, "PRintn \n");
         for (int i = 0; i < data->getFullVerticalSize(); i++) {
             for (int j = 0; j < data->getFullHorizontalSize(); j++) {
                 size_t index = i * data->getStride() + j;
@@ -27,6 +28,7 @@ class CADataPrinter {
 	lDebug(1, "PRintn \n");
         for (int i = 0; i < data->getInnerHorizontalSize(); i++) {
             for (int j = 0; j < data->getInnerHorizontalSize(); j++) {
+		//lDebug(1, "PRPR %i,%i", i, j);
                 int element = data->getInnerElementAt(i, j);
                 if (element == 0) {
                     printf("- ");
@@ -39,6 +41,7 @@ class CADataPrinter {
         printf("\n");
     }
     static void printCADataWithHalo(CADataDomain<uint8_t>* data) {
+	lDebug(1, "PRintn \n");
         for (int i = 0; i < data->getFullVerticalSize(); i++) {
             for (int j = 0; j < data->getFullHorizontalSize(); j++) {
                 size_t index = i * data->getStride() + j;
@@ -55,6 +58,7 @@ class CADataPrinter {
         printf("\n");
     }
     static void printCADataWithoutHalo(CADataDomain<uint8_t>* data) {
+	lDebug(1, "PRintn \n");
         for (int i = 0; i < data->getInnerHorizontalSize(); i++) {
             for (int j = 0; j < data->getInnerHorizontalSize(); j++) {
                 int element = data->getInnerElementAt(i, j);

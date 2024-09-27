@@ -24,18 +24,34 @@ typedef struct __tile_config
   uint8_t rows[16];
 } __tilecfg;
 
+#define ARCH_GET_XCOMP_PERM     0x1022
+#define ARCH_REQ_XCOMP_PERM     0x1023
+#define XFEATURE_XTILECFG       17
+#define XFEATURE_XTILEDATA      18
+
+
 class AMXSolver : public CASolver {
    private:
 
+
+    uint8_t *pi_1;
+    uint8_t *pi_2;
+    uint8_t *pi_3;
+    uint8_t *pi_4;
+    uint8_t *pi_5;
+    uint8_t *pi_6;
+
+    uint8_t *pi_1B;
+    uint8_t *pi_2B;
+    uint8_t *pi_3B;
+    uint8_t *pi_4B;
+    uint8_t *pi_5B;
+    uint8_t *pi_6B;
     __tilecfg *tile_config;
-
-    uint8_t pi_1[16*64];
-    uint8_t pi_2[16*64];
-    uint8_t pi_3[16*64];
-
 
     CADataDomain<uint8_t>* dataDomain;
     CADataDomain<uint8_t>* dataDomainBuffer;
+    CADataDomain<uint8_t>* dataDomainIntermediate;
 
     void CAStepAlgorithm() override;
     void fillHorizontalBoundaryConditions() override;

@@ -6,7 +6,7 @@
 #include "Defines.h"
 #include "StatsCollector.hpp"
 #include <random>
-#define PRINT_LIMIT (512)
+#define PRINT_LIMIT (64)
 
 class CPUBenchmark
 {
