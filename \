@@ -44,7 +44,6 @@ T HostSolver<T>::transitionFunction(int k, int a, int b) {
 
 template <typename T>
 void HostSolver<T>::CAStepAlgorithm() {
-	#pragma omp barrier
     #pragma omp for
     for (int i = 0; i < dataDomain->getInnerHorizontalSize(); ++i) {
         for (int j = 0; j < dataDomain->getInnerHorizontalSize(); ++j) {
@@ -74,8 +73,7 @@ int HostSolver<T>::countAliveNeighbors(int y, int x) {
 
 template <typename T>
 void HostSolver<T>::fillHorizontalBoundaryConditions() {
-#pragma omp barrier
-    #pragma omp for
+	if (omp_get_thread_num() == 0){
     for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
         for (int j = 0; j < dataDomain->getInnerHorizontalSize(); ++j) {
             size_t topIndex = (dataDomain->getHorizontalHaloSize() + h) * dataDomain->getFullHorizontalSize() + dataDomain->getHorizontalHaloSize() + j;
@@ -91,13 +89,13 @@ void HostSolver<T>::fillHorizontalBoundaryConditions() {
             T value = dataDomain->getElementAt(bottomIndex);
             dataDomain->setElementAt(topIndex, value);
         }
+    }
 	}
 }
 
 template <typename T>
 void HostSolver<T>::fillVerticalBoundaryConditions() {
-#pragma omp barrier
-    #pragma omp for
+	if (omp_get_thread_num() == 0){
     for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
         for (int i = 0; i < dataDomain->getFullHorizontalSize(); ++i) {
             size_t leftIndex = i * dataDomain->getFullHorizontalSize() + h;
@@ -113,4 +111,5 @@ void HostSolver<T>::fillVerticalBoundaryConditions() {
             dataDomain->setElementAt(rightIndex, value);
         }
     }
+	}
 }

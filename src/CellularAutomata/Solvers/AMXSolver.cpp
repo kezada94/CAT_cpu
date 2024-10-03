@@ -2,7 +2,7 @@
 #include "CellularAutomata/Solvers/AMXSolver.h"
 #include "Memory/Allocators/CPUAllocator.h"
 
-AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer) {
+AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer, int nThreads) {
     dataDomain = domain;
     dataDomainBuffer = domainBuffer;
 
@@ -15,6 +15,8 @@ AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domai
         Allocator<uint8_t> *allocatorint8 = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocatorint8);
         dataDomainIntermediate = new CADataDomain<uint8_t>(allocatorint8, dataDomain->getInnerHorizontalSize(), dataDomain->getHorizontalHaloSize());
         dataDomainIntermediate->allocate();
+
+	buffer = new int[64*64*nThreads];
 
 	lDebug(1, "Setting up AMX");
     setupAMX();
@@ -61,14 +63,13 @@ void AMXSolver::setupAMX() {
 void AMXSolver::fillTridiag() {
 	uint8_t* data = (uint8_t*) malloc(64*16*12*sizeof(uint8_t));
 	pi_1  = &data[64*16*0];
-	pi_2  = (uint8_t*) malloc(64*16*sizeof(uint8_t));
+	pi_2  = &data[64*16*1];
 	pi_3  = &data[64*16*2];
 	pi_4  = &data[64*16*3];
 	pi_5  = &data[64*16*4];
 	pi_6  = &data[64*16*5];
 	pi_1B  = &data[64*16*6];
-	pi_2B  = (uint8_t*) malloc(64*16*sizeof(uint8_t));
-	//pi_2B  = &data[64*16*7];
+	pi_2B  = &data[64*16*7];
 	pi_3B  = &data[64*16*8];
 	pi_4B  = &data[64*16*9];
 	pi_5B  = &data[64*16*10];
@@ -213,25 +214,26 @@ void AMXSolver::copyHostVisibleDataToCurrentState() {
 }
 
 void AMXSolver::swapPointers() {
-    CADataDomain<uint8_t>* temp = dataDomain;
-    dataDomain = dataDomainBuffer;
-    dataDomainBuffer = temp;
+	if (omp_get_thread_num() == 0){
+		CADataDomain<uint8_t>* temp = dataDomain;
+		dataDomain = dataDomainBuffer;
+		dataDomainBuffer = temp;
+	}
 }
 
 uint8_t AMXSolver::transitionFunction(int k, int a, int b) {
     return (1 - (((k - a) >> 31) & 0x1)) * (1 - (((b - k) >> 31) & 0x1));
 }
 
-int buffer[64*64];
-uint8_t buffer2[16*64];
-uint8_t hardcoded[16*64];
-
-
 void AMXSolver::CAStepAlgorithm() {
+#pragma omp barrier
     uint8_t* data = dataDomain->getData();
     uint8_t* dataBuffer = dataDomainBuffer->getData();
     uint8_t* dataI = dataDomainIntermediate->getData();
     size_t nWithHalo = dataDomain->getFullHorizontalSize();
+
+	int num_threads = omp_get_num_threads();
+    int thread_id = omp_get_thread_num();
 
     _tile_loadd(1, pi_1B, 64);
     _tile_loadd(2, pi_2B, 64);
@@ -240,12 +242,17 @@ void AMXSolver::CAStepAlgorithm() {
     _tile_loadd(5, pi_5B, 64);
     _tile_loadd(6, pi_6B, 64);
 
+	int iterations = nWithHalo/64;
+	int chunk_size = iterations / num_threads;
+	int start = thread_id * chunk_size;
+	int end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
 
     //FIRST STEP: horizontal reduction
-    for (size_t i = 0; i < nWithHalo; i+=64) {
+    for (size_t iter = start; iter < end; iter++) {
         for (size_t j = 0; j < nWithHalo - 64*2; j+=64) {
             //take three continuous 16x16 blocks and load them into amx
 			//printf("%i,%i\n", i, j);
+			size_t i = iter*64;
 
 		    // tiles in C from 0,0 to 3,0 (first col)
 			for (int k = 0; k < 4; k++){
@@ -254,7 +261,7 @@ void AMXSolver::CAStepAlgorithm() {
 				_tile_dpbssd(0, 7, 6);
 				_tile_loadd(7, &data[(i+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbuud(0, 7, 2);
-				_tile_stored(0, &buffer[(k*16)*64 + 16*0], 64*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + (k*16)*64 + 16*0], 64*4);
 				//_tile_stored(0, &buffer, 16*4);
 				//_tile_stored(2, &buffer2, 64);
 				//printf("data[%i] and buffer[%i] \n",  (i+16*k) * nWithHalo + j + 64, k*16*64 + 16*0);
@@ -264,13 +271,13 @@ void AMXSolver::CAStepAlgorithm() {
             	_tile_zero(0);
 				_tile_loadd(7, &data[(i+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 3);
-				_tile_stored(0, &buffer[k*16*64 + 16*1], 16*4*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*1], 16*4*4);
 			}
 			for (int k  = 0; k < 4; k++){
             	_tile_zero(0);
 				_tile_loadd(7, &data[(i+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 4);
-				_tile_stored(0, &buffer[k*16*64 + 16*2], 16*4*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*2], 16*4*4);
 			}
 			for (int k  = 0; k < 4; k++){
             	_tile_zero(0);
@@ -278,7 +285,7 @@ void AMXSolver::CAStepAlgorithm() {
 				_tile_dpbssd(0, 7, 1);
 				_tile_loadd(7, &data[(i+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 5);
-				_tile_stored(0, &buffer[k*16*64 + 16*3], 16*4 *4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*3], 16*4 *4);
 
 			}
 		//	printf("BEfORE TRANSPOSE\n");
@@ -303,7 +310,7 @@ void AMXSolver::CAStepAlgorithm() {
 		//	}
 			for (int ii=0; ii<64; ii++){
 				for (int jj=0; jj<64; jj++){
-						dataI[(i+jj)*nWithHalo + j + ii + 64] = buffer[ii*64+jj];
+						dataI[(i+jj)*nWithHalo + j + ii + 64] = buffer[thread_id*64*64 + ii*64+jj];
 				}
 			}
 		//	printf("AFTER TRANSPOSE\n");
@@ -316,9 +323,16 @@ void AMXSolver::CAStepAlgorithm() {
 		//	printf("\n");
         }
     }
+#pragma omp barrier
     //SECOND STEP: vertical reduction
-    for (int i = 0; i < nWithHalo - 64*2; i+=64) {
+	iterations = (nWithHalo - 64*2)/64;
+	chunk_size = iterations / num_threads;
+	start = thread_id * chunk_size;
+	end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
+    //for (int i = 0; i < nWithHalo - 64*2; i+=64) {
+    for (int iter = start; iter < end; iter++) {
         for (int j = 0; j < nWithHalo - 64*2; j+=64) {
+			size_t i = iter*64;
             //take three continuous 16x16 blocks and load them into amx
 			for (int k = 0; k < 4; k++){
             	_tile_zero(0);
@@ -326,7 +340,7 @@ void AMXSolver::CAStepAlgorithm() {
 				_tile_dpbuud(0, 7, 6);
 				_tile_loadd(7, &dataI[(i+64+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbuud(0, 7, 2);
-				_tile_stored(0, &buffer[(k*16)*64 + 16*0], 64*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + (k*16)*64 + 16*0], 64*4);
 				//_tile_stored(0, &buffer, 16*4);
 				//_tile_stored(2, &buffer2, 64);
 				//printf("data[%i] and buffer[%i] \n",  (i+16*k) * nWithHalo + j + 64, k*16*64 + 16*0);
@@ -336,13 +350,13 @@ void AMXSolver::CAStepAlgorithm() {
             	_tile_zero(0);
 				_tile_loadd(7, &dataI[(i+64+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 3);
-				_tile_stored(0, &buffer[k*16*64 + 16*1], 16*4*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*1], 16*4*4);
 			}
 			for (int k  = 0; k < 4; k++){
             	_tile_zero(0);
 				_tile_loadd(7, &dataI[(i+64+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 4);
-				_tile_stored(0, &buffer[k*16*64 + 16*2], 16*4*4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*2], 16*4*4);
 			}
 			for (int k  = 0; k < 4; k++){
             	_tile_zero(0);
@@ -350,14 +364,14 @@ void AMXSolver::CAStepAlgorithm() {
 				_tile_dpbssd(0, 7, 1);
 				_tile_loadd(7, &dataI[(i+64+16*k) * nWithHalo + j + 64], nWithHalo);
 				_tile_dpbssd(0, 7, 5);
-				_tile_stored(0, &buffer[k*16*64 + 16*3], 16*4 *4);
+				_tile_stored(0, &buffer[thread_id*64*64 + k*16*64 + 16*3], 16*4 *4);
 
 			}
 
 			for (int ii=0; ii<64; ii++){
 				for (int jj=0; jj<64; jj+=1){
              		uint8_t cellValue = data[(i+ii + 64)*nWithHalo + j + 64 + jj];
-             		int liveNeighbors = buffer[jj*64+ii] - cellValue;
+             		int liveNeighbors = buffer[thread_id*64*64 + jj*64+ii] - cellValue;
 
              	    uint8_t result = cellValue * transitionFunction(liveNeighbors, SMIN, SMAX) + (1 - cellValue) * transitionFunction(liveNeighbors, BMIN, BMAX);
 					dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj] = result;
@@ -398,16 +412,30 @@ int AMXSolver::countAliveNeighbors(int y, int x) {
 }
 
 void AMXSolver::fillHorizontalBoundaryConditions() {
-    for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
-        for (int j = 0; j < dataDomain->getInnerHorizontalSize(); ++j) {
+#pragma omp barrier
+    //for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
+	int num_threads = omp_get_num_threads();
+    int thread_id = omp_get_thread_num();
+
+	int innerSize = dataDomain->getInnerHorizontalSize();
+	int chunk_size = innerSize / num_threads;
+	int start = thread_id * chunk_size;
+	int end = (thread_id == num_threads - 1) ? innerSize : start + chunk_size;
+
+
+    for (int h = 0; h < RADIUS; ++h) {
+		// Top elements to bottom halo
+        //for (int j = 0; j < dataDomain->getInnerHorizontalSize(); ++j) {
+        for (int j = start; j < end; ++j) {
             size_t topIndex = (dataDomain->getHorizontalHaloSize() + h) * dataDomain->getFullHorizontalSize() + dataDomain->getHorizontalHaloSize() + j;
             size_t bottomIndex = topIndex + (dataDomain->getInnerHorizontalSize()) * dataDomain->getFullHorizontalSize();
             uint8_t value = dataDomain->getElementAt(topIndex);
             dataDomain->setElementAt(bottomIndex, value);
         }
 
-        for (int j = 0; j < dataDomain->getInnerHorizontalSize(); ++j) {
-            size_t topIndex = (h)*dataDomain->getFullHorizontalSize() + dataDomain->getHorizontalHaloSize() + j;
+		// Bottom elements to top halo
+        for (int j = start; j < end; ++j) {
+            size_t topIndex = (dataDomain->getHorizontalHaloSize() - h - 1)*dataDomain->getFullHorizontalSize() + dataDomain->getHorizontalHaloSize() + j;
             size_t bottomIndex = topIndex + (dataDomain->getInnerHorizontalSize()) * dataDomain->getFullHorizontalSize();
 
             uint8_t value = dataDomain->getElementAt(bottomIndex);
@@ -417,15 +445,28 @@ void AMXSolver::fillHorizontalBoundaryConditions() {
 }
 
 void AMXSolver::fillVerticalBoundaryConditions() {
-    for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
-        for (int i = 0; i < dataDomain->getFullHorizontalSize(); ++i) {
-            size_t leftIndex = i * dataDomain->getFullHorizontalSize() + h;
+#pragma omp barrier
+	int num_threads = omp_get_num_threads();
+    int thread_id = omp_get_thread_num();
+
+	int fullSize = dataDomain->getFullHorizontalSize();
+    int chunk_size = fullSize / num_threads;
+    int start = thread_id * chunk_size;
+    int end = (thread_id == num_threads - 1) ? fullSize : start + chunk_size;
+
+
+    //for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
+    for (int h = 0; h < RADIUS; ++h) {
+		//Rightmost elements to left halo
+        //for (int i = 0; i < dataDomain->getFullHorizontalSize(); ++i) {
+        for (int i = start; i < end; ++i) {
+            size_t leftIndex = i * dataDomain->getFullHorizontalSize() + (dataDomain->getHorizontalHaloSize() - h - 1);
             size_t rightIndex = leftIndex + dataDomain->getInnerHorizontalSize();
             uint8_t value = dataDomain->getElementAt(rightIndex);
             dataDomain->setElementAt(leftIndex, value);
         }
 
-        for (int i = 0; i < dataDomain->getFullHorizontalSize(); ++i) {
+        for (int i = start; i < end; ++i) {
             size_t leftIndex = i * dataDomain->getFullHorizontalSize() + dataDomain->getHorizontalHaloSize() + h;
             size_t rightIndex = leftIndex + dataDomain->getInnerHorizontalSize();
             uint8_t value = dataDomain->getElementAt(leftIndex);

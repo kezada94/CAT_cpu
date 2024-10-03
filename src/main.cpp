@@ -21,6 +21,7 @@ struct MainArgs
     int deviceId;
     float density;
     int seed;
+	int threads;
     int doVerify;
 };
 
@@ -46,14 +47,14 @@ int main(int argc, char **argv)
     args = parseArguments(program);
     debugInit(1, logFileName);
 
-    CASolver *solver = CASolverFactory::createSolver(args.mode, args.deviceId, args.n, RADIUS);
+    CASolver *solver = CASolverFactory::createSolver(args.mode, args.deviceId, args.n, RADIUS, args.threads);
 
     if (solver == nullptr)
     {
         printf("main(): solver is NULL\n");
         exit(1);
     }
-    CPUBenchmark *benchmark = new CPUBenchmark(solver, args.n, args.steps, args.seed, args.density);
+    CPUBenchmark *benchmark = new CPUBenchmark(solver, args.n, args.steps, args.seed, args.density, args.threads);
 
     benchmark->run();
 
@@ -63,14 +64,14 @@ int main(int argc, char **argv)
     if (args.doVerify)
     {
         printf("\n[VERIFY] verifying...\n\n");
-        CASolver *referenceSolver = CASolverFactory::createSolver(0, 0, args.n, RADIUS);
+        CASolver *referenceSolver = CASolverFactory::createSolver(0, 0, args.n, RADIUS, args.threads);
         if (referenceSolver == nullptr)
         {
             printf("main(): solver is NULL\n");
             exit(1);
         }
         CPUBenchmark *referenceBenchmark =
-            new CPUBenchmark(referenceSolver, args.n, args.steps, args.seed, args.density);
+            new CPUBenchmark(referenceSolver, args.n, args.steps, args.seed, args.density, args.threads);
         lDebug(1, "***** Verifyng *****");
         referenceBenchmark->run();
 
@@ -119,6 +120,11 @@ void defineArguments(argparse::ArgumentParser &program)
         .action([](const std::string &value) { return std::stoi(value); })
         .default_value(0);
 
+    program.add_argument("--threads")
+        .help("Number of threads to use")
+        .action([](const std::string &value) { return std::stoi(value); })
+        .default_value(1);
+
     program.add_argument("--doVerify")
         .help("Verify the results? WARNING: memory requirements double")
         .default_value(false)
@@ -134,6 +140,7 @@ MainArgs parseArguments(argparse::ArgumentParser &program)
     args.deviceId = program.get<int>("-g");
     args.density = program.get<float>("-d");
     args.seed = program.get<int>("--seed");
+    args.threads = program.get<int>("--threads");
     args.doVerify = program.get<bool>("--doVerify");
     return args;
 }

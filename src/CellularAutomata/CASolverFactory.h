@@ -9,5 +9,5 @@
 class CASolverFactory
 {
   public:
-    static CASolver *createSolver(int SOLVER_CODE, int deviceId, int sideLength, int haloWidth);
+    static CASolver *createSolver(int SOLVER_CODE, int deviceId, int sideLength, int haloWidth, int nThreads);
 };

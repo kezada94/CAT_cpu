@@ -1,15 +1,20 @@
 #include "CPUBenchmark.h"
 
-CPUBenchmark::CPUBenchmark(CASolver *pSolver, int n, int pSteps, int pSeed, float pDensity)
+CPUBenchmark::CPUBenchmark(CASolver *pSolver, int n, int pSteps, int pSeed, float pDensity, int pThreads)
 {
     solver = pSolver;
     this->n = n;
     steps = pSteps;
     seed = pSeed;
+    threads = pThreads;
     density = pDensity;
 
     timer = new CpuTimer();
     stats = new StatsCollector();
+
+	lDebug(1, "Setting the number of threads to %i", pThreads);
+	omp_set_num_threads(pThreads);
+
 }
 
 void CPUBenchmark::reset()
@@ -47,11 +52,22 @@ void CPUBenchmark::run()
 }
 void CPUBenchmark::doOneRun()
 {
-    timer->start();
 
-    solver->doSteps(steps);
+	#pragma omp parallel
+    {
 
-    timer->stop();
+		int tid = omp_get_thread_num();
+		
+		if (tid == 0){
+			timer->start();
+		}
+		solver->doSteps(steps);
+
+		if (tid == 0){
+			timer->stop();
+		}
+	}
+
     registerElapsedTime(timer->getElapsedTimeMilliseconds() / steps);
 }
 

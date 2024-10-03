@@ -6,6 +6,8 @@
 #include "Defines.h"
 #include "StatsCollector.hpp"
 #include <random>
+#include <omp.h>
+
 #define PRINT_LIMIT (64)
 
 class CPUBenchmark
@@ -14,6 +16,7 @@ class CPUBenchmark
     int steps;
     int n;
     int seed;
+    int threads;
     float density;
 
     CASolver *solver;
@@ -26,7 +29,7 @@ class CPUBenchmark
     void reset();
 
   public:
-    CPUBenchmark(CASolver *pSolver, int n, int pSteps, int pSeed, float pDensity);
+    CPUBenchmark(CASolver *pSolver, int n, int pSteps, int pSeed, float pDensity, int pThreads);
 
     void run();
     StatsCollector *getStats();

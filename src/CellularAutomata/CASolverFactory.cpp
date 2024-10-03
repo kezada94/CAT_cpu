@@ -3,7 +3,7 @@
 
 static const int TENSOR_HALO_SIZE = 16;
 
-CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullHorizontalSize, int horizontalHaloSize)
+CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullHorizontalSize, int horizontalHaloSize, int nThreads)
 {
     CASolver *solver = nullptr;
 
@@ -32,7 +32,7 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
         CADataDomain<uint8_t> *dataDomainBuffer = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 64);
         dataDomainBuffer->allocate();
 
-        solver = new AMXSolver(dataDomain, dataDomainBuffer);
+        solver = new AMXSolver(dataDomain, dataDomainBuffer, nThreads);
         lDebug(1, "Solver of type AMXSolver created");
 
         break;

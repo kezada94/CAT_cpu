@@ -16,14 +16,9 @@ void CASolver::doSteps(int stepNumber) {
     }
 }
 void CASolver::doStep() {
-	lDebug(1, "	STEP: begin");
-	lDebug(1, "	STEP: filling boundary conditions");
     fillBoundaryConditions();
-	lDebug(1, "	STEP: Stepping");
     CAStepAlgorithm();
-	lDebug(1, "	STEP: swapping pointers");
     swapPointers();
-	lDebug(1, "	STEP: end");
 }
 void CASolver::fillBoundaryConditions() {
     fillHorizontalBoundaryConditions();

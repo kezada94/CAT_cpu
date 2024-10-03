@@ -33,20 +33,19 @@ typedef struct __tile_config
 class AMXSolver : public CASolver {
    private:
 
-
     uint8_t *pi_1;
     uint8_t *pi_2;
     uint8_t *pi_3;
     uint8_t *pi_4;
     uint8_t *pi_5;
     uint8_t *pi_6;
-
     uint8_t *pi_1B;
     uint8_t *pi_2B;
     uint8_t *pi_3B;
     uint8_t *pi_4B;
     uint8_t *pi_5B;
     uint8_t *pi_6B;
+    int *buffer;
     __tilecfg *tile_config;
 
     CADataDomain<uint8_t>* dataDomain;
@@ -68,5 +67,5 @@ class AMXSolver : public CASolver {
     void setupAMX();
 
    public:
-    AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer);
+    AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer, int nThreads);
 };
