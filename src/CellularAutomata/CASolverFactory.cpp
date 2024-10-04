@@ -37,6 +37,21 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
 
         break;
     }
+    case 2: {
+        lDebug(1, "Creating solver of type AMXSolver16");
+        CPUAllocator<uint8_t> *cpuAllocator = new CPUAllocator<uint8_t>();
+        Allocator<uint8_t> *allocator = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocator);
+        CADataDomain<uint8_t> *dataDomain = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 16);
+        dataDomain->allocate();
+
+        CADataDomain<uint8_t> *dataDomainBuffer = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 16);
+        dataDomainBuffer->allocate();
+
+        solver = new AMXSolver16(dataDomain, dataDomainBuffer, nThreads);
+        lDebug(1, "Solver of type AMXSolver created");
+
+        break;
+    }
     }
     return solver;
 }

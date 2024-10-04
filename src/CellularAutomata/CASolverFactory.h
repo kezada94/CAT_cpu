@@ -2,6 +2,7 @@
 
 #include "CellularAutomata/Solvers/HostSolver.h"
 #include "CellularAutomata/Solvers/AMXSolver.h"
+#include "CellularAutomata/Solvers/AMXSolver16.h"
 #include "Debug.h"
 #include "Defines.h"
 #include "Memory/Allocators/CPUAllocator.h"
