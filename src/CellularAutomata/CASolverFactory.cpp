@@ -9,20 +9,22 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
 
     switch (SOLVER_CODE)
     {
-    case 0: {
-        CPUAllocator<int>* cpuAllocator = new CPUAllocator<int>();
-        Allocator<int>* allocator = reinterpret_cast<Allocator<int>*>(cpuAllocator);
-        CADataDomain<int>* dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+    case 0:
+    {
+        CPUAllocator<int> *cpuAllocator = new CPUAllocator<int>();
+        Allocator<int> *allocator = reinterpret_cast<Allocator<int> *>(cpuAllocator);
+        CADataDomain<int> *dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
         dataDomain->allocate();
 
-        CADataDomain<int>* dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+        CADataDomain<int> *dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
         dataDomainBuffer->allocate();
 
         solver = new HostSolver<int>(dataDomain, dataDomainBuffer);
         lDebug(1, "Solver of type HostSolver created");
         break;
     }
-    case 1: {
+    case 1:
+    {
         lDebug(1, "Creating solver of type AMXSolver");
         CPUAllocator<uint8_t> *cpuAllocator = new CPUAllocator<uint8_t>();
         Allocator<uint8_t> *allocator = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocator);
@@ -37,7 +39,8 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
 
         break;
     }
-    case 2: {
+    case 2:
+    {
         lDebug(1, "Creating solver of type AMXSolver16");
         CPUAllocator<uint8_t> *cpuAllocator = new CPUAllocator<uint8_t>();
         Allocator<uint8_t> *allocator = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocator);
@@ -50,6 +53,20 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
         solver = new AMXSolver16(dataDomain, dataDomainBuffer, nThreads);
         lDebug(1, "Solver of type AMXSolver created");
 
+        break;
+    }
+    case 3:
+    {
+        CPUAllocator<int> *cpuAllocator = new CPUAllocator<int>();
+        Allocator<int> *allocator = reinterpret_cast<Allocator<int> *>(cpuAllocator);
+        CADataDomain<int> *dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+        dataDomain->allocate();
+
+        CADataDomain<int> *dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+        dataDomainBuffer->allocate();
+
+        solver = new AVXSolver(dataDomain, dataDomainBuffer);
+        lDebug(1, "Solver of type AVXSOLVER created");
         break;
     }
     }

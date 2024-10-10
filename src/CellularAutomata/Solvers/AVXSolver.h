@@ -4,12 +4,15 @@
 #include "CellularAutomata/Solvers/CASolver.h"
 #include "Memory/CADataDomain.h"
 #include "Memory/CAStateGenerator.h"
+#include <immintrin.h>
+#include <stdint.h>
+#include <stddef.h>
 
-template <typename T>
-class HostSolver : public CASolver {
-   private:
-    CADataDomain<T>* dataDomain;
-    CADataDomain<T>* dataDomainBuffer;
+class AVXSolver : public CASolver
+{
+private:
+    CADataDomain<int> *dataDomain;
+    CADataDomain<int> *dataDomainBuffer;
 
     void preamble() override;
 
@@ -21,11 +24,9 @@ class HostSolver : public CASolver {
     void copyCurrentStateToHostVisibleData() override;
     void copyHostVisibleDataToCurrentState() override;
 
-    T transitionFunction(int k, int a, int b);
+    int transitionFunction(int k, int a, int b);
     int countAliveNeighbors(int i, int j);
 
-   public:
-    HostSolver(CADataDomain<T>* domain, CADataDomain<T>* domainBuffer);
+public:
+    AVXSolver(CADataDomain<int> *domain, CADataDomain<int> *domainBuffer);
 };
-
-#include "CellularAutomata/Solvers/HostSolver.tpp"

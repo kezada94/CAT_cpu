@@ -18,6 +18,7 @@ class CASolver {
     virtual void copyCurrentStateToHostVisibleData() = 0;
     virtual void copyHostVisibleDataToCurrentState() = 0;
 
+    virtual void preamble() = 0;
    public:
     virtual void resetState(int seed, float density);
     virtual void doStep();

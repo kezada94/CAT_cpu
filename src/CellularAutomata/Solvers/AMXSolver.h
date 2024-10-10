@@ -50,7 +50,9 @@ class AMXSolver : public CASolver {
 
     CADataDomain<uint8_t>* dataDomain;
     CADataDomain<uint8_t>* dataDomainBuffer;
-    CADataDomain<uint8_t>* dataDomainIntermediate;
+    uint8_t** dataI;
+
+    void preamble() override;
 
     void CAStepAlgorithm() override;
     void fillHorizontalBoundaryConditions() override;
