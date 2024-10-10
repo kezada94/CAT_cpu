@@ -51,15 +51,15 @@ void AVXSolver::preamble()
 
 void AVXSolver::CAStepAlgorithm()
 {
-    alignas(32) int aliveNeighbors[8];
+    int* data = dataDomain->getData();
+    size_t halo = dataDomain->getHorizontalHaloSize();
 #pragma omp for
     for (int i = 0; i < dataDomain->getInnerHorizontalSize(); ++i)
     {
         for (int j = 0; j < dataDomain->getInnerHorizontalSize(); j += 8)
         {
-            // printf("i: %d, j: %d\n", i, j);
             // Load 8 elements from the center position
-            __m256i center = _mm256_loadu_si256((__m256i *)(dataDomain->getData() + i * dataDomain->getFullHorizontalSize() + j));
+            __m256i center = _mm256_loadu_si256((__m256i *)&data[(i+halo) * dataDomain->getFullHorizontalSize() + j + halo]);
             __m256i neighbor_sum = _mm256_setzero_si256(); // Initialize sum for 32-bit integers
 
             for (int y = -RADIUS; y <= RADIUS; ++y)
@@ -70,7 +70,8 @@ void AVXSolver::CAStepAlgorithm()
                         continue;
 
                     // Calculate neighbor index
-                    size_t index = (y + i) * dataDomain->getFullHorizontalSize() + (x + j);
+                    size_t index = (y + i + halo) * dataDomain->getFullHorizontalSize() + (x + j + halo);
+
                     // Load neighbor elements (assume these are also 32-bit integers)
                     __m256i neighbor = _mm256_loadu_si256((__m256i *)(dataDomain->getData() + index));
 
@@ -78,29 +79,34 @@ void AVXSolver::CAStepAlgorithm()
                     neighbor_sum = _mm256_add_epi32(neighbor_sum, neighbor);
                 }
             }
-            // Apply Game of Life rules
-            // Condition for survival: live cells with 2 or 3 neighbors survive, others die
-            __m256i live_mask = _mm256_cmpgt_epi32(center, _mm256_setzero_si256()); // Mask for live cells (center > 0)
+
+
+            __m256i live_mask = center; // Mask for live cells (center > 0)
+
             __m256i survival_mask = _mm256_and_si256(
                 _mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(SMIN - 1)), // Neighbors >= SMIN
                 _mm256_cmpgt_epi32(_mm256_set1_epi32(SMAX + 1), neighbor_sum)  // Neighbors <= SMAX
             );
 
-            // Condition for birth: dead cells with exactly 3 neighbors become alive
-            __m256i birth_mask = _mm256_cmpeq_epi32(neighbor_sum, _mm256_set1_epi32(BMIN));
+            // Condition for birth: dead cells with BMIN <= neighbors <= BMAX become alive
+            __m256i dead_mask = _mm256_cmpeq_epi32(center, _mm256_setzero_si256()); // Mask for dead cells
+
+            __m256i birth_mask = _mm256_and_si256(
+                _mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(BMIN - 1)), // Neighbors >= BMIN
+                _mm256_cmpgt_epi32(_mm256_set1_epi32(BMAX + 1), neighbor_sum)  // Neighbors <= BMAX
+            );
 
             // New state: live cells that survive OR dead cells that are born
             __m256i new_state = _mm256_or_si256(
                 _mm256_and_si256(live_mask, survival_mask), // Surviving live cells
-                birth_mask                                  // Newly born cells
+                _mm256_and_si256(_mm256_and_si256(dead_mask, _mm256_set1_epi32(1)) , birth_mask)     // Newly born cells
             );
 
-            // Store the new state back to the buffer (could be packed into 8-bit if necessary)
-            _mm256_storeu_si256((__m256i *)((dataDomainBuffer->getData() + i * dataDomainBuffer->getFullHorizontalSize() + j)), new_state);
+            // Store the new state back to the buffer
+            _mm256_storeu_si256((__m256i *)((dataDomainBuffer->getData() + (i+halo) * dataDomainBuffer->getFullHorizontalSize() + j+halo)), new_state);
         }
     }
 }
-
 int AVXSolver::countAliveNeighbors(int y, int x)
 {
     int aliveNeighbors = 0;
