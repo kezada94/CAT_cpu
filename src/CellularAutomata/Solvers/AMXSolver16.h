@@ -14,14 +14,15 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define ARCH_GET_XCOMP_PERM 0x1022
-#define ARCH_REQ_XCOMP_PERM 0x1023
-#define XFEATURE_XTILECFG 17
-#define XFEATURE_XTILEDATA 18
+#define ARCH_GET_XCOMP_PERM     0x1022
+#define ARCH_REQ_XCOMP_PERM     0x1023
+#define XFEATURE_XTILECFG       17
+#define XFEATURE_XTILEDATA      18
 
-class AMXSolver16 : public CASolver
-{
-private:
+
+class AMXSolver16 : public CASolver {
+   private:
+
     uint8_t *pi_1;
     uint8_t *pi_2;
     uint8_t *pi_3;
@@ -29,15 +30,13 @@ private:
     uint8_t *pi_2B;
     uint8_t *pi_3B;
     int *buffer;
-
     __tilecfg *tile_config;
 
-    CADataDomain<uint8_t> *dataDomain;
-    CADataDomain<uint8_t> *dataDomainBuffer;
-    uint8_t **dataI;
+    CADataDomain<uint8_t>* dataDomain;
+    CADataDomain<uint8_t>* dataDomainBuffer;
+    CADataDomain<uint8_t>* dataDomainIntermediate;
 
     void preamble() override;
-
     void CAStepAlgorithm() override;
     void fillHorizontalBoundaryConditions() override;
     void fillVerticalBoundaryConditions() override;
@@ -52,6 +51,6 @@ private:
     void fillTridiag();
     void setupAMX();
 
-public:
-    AMXSolver16(CADataDomain<uint8_t> *domain, CADataDomain<uint8_t> *domainBuffer, int nThreads);
+   public:
+    AMXSolver16(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer, int nThreads);
 };
