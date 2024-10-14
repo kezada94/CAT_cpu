@@ -30,8 +30,6 @@ void CPUBenchmark::run()
     srand(seed);
     reset();
     lDebug(1, "Benchmark started");
-    // WARMUP for STEPS/4
-    // solver->doSteps(steps >> 2);
 
     lDebug(1, "Initial state:");
     if (n <= PRINT_LIMIT)
@@ -63,6 +61,7 @@ void CPUBenchmark::doOneRun()
 		}
 		solver->doSteps(steps);
 
+		#pragma omp barrier
 		if (tid == 0){
 			timer->stop();
 		}

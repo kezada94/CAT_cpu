@@ -63,5 +63,6 @@ void StatsCollector::printStats() {
     printf("Variance: %f\n", getVariance());
 }
 void StatsCollector::printShortStats() {
-    printf("%f,%f,%f,%f\n", getAverage(), getStandardDeviation(), getStandardError(), getVariance());
+//printf("%f,%f,%f,%f\n", getAverage(), getStandardDeviation(), getStandardError(), getVariance());
+	printf("%f\n", getAverage());
 }

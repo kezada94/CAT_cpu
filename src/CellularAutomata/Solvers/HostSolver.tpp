@@ -58,7 +58,6 @@ void HostSolver<T>::preamble()
 template <typename T>
 void HostSolver<T>::CAStepAlgorithm()
 {
-#pragma omp barrier
 #pragma omp for
     for (int i = 0; i < dataDomain->getInnerHorizontalSize(); ++i)
     {
