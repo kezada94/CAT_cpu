@@ -244,6 +244,7 @@ void AMXSolver::CAStepAlgorithm() {
 	int num_threads = omp_get_num_threads();
     int thread_id = omp_get_thread_num();
 
+
     _tile_loadd(1, pi_1B, 64);
     _tile_loadd(2, pi_2B, 64);
     _tile_loadd(3, pi_3B, 64);
@@ -378,15 +379,51 @@ void AMXSolver::CAStepAlgorithm() {
 			}
 
 			for (int ii=0; ii<64; ii++){
-				for (int jj=0; jj<64; jj+=1){
-             		uint8_t cellValue = data[(i+ii + 64)*nWithHalo + j + 64 + jj];
-             		int liveNeighbors = buffer[thread_id*64*64 + jj*64+ii] - cellValue;
+				for (int jj=0; jj<64; jj+=8){
+					int cente[8];
+					int neigh[8];
+					int res[8];
+					for (int kk=0; kk<8; kk++){
+						cente[kk] = data[(i+ii + 64)*nWithHalo + j + 64 + jj + kk];
+						neigh[kk] = buffer[thread_id*64*64 + (jj+kk)*64+ii] - cente[kk];
+					}
+            // 		uint8_t cellValue = data[(i+ii + 64)*nWithHalo + j + 64 + jj];
+            // 		int liveNeighbors = buffer[thread_id*64*64 + jj*64+ii] - cellValue;
 
-             	    uint8_t result = cellValue * transitionFunction(liveNeighbors, SMIN, SMAX) + (1 - cellValue) * transitionFunction(liveNeighbors, BMIN, BMAX);
-					dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj] = result;
+            // 	    uint8_t result = cellValue * transitionFunction(liveNeighbors, SMIN, SMAX) + (1 - cellValue) * transitionFunction(liveNeighbors, BMIN, BMAX);
+		//			dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj] = result;
 					//printf("%i ", data[(i+ii + 64)*nWithHalo + j + 64 + jj]);
+					__m256i center = _mm256_loadu_si256((__m256i *)&cente[0]);
+					__m256i neighbor_sum = _mm256_loadu_si256((__m256i *)&neigh[0]);
+
+					__m256i live_mask = center; // Mask for live cells (center > 0)
+
+					__m256i survival_mask = _mm256_and_si256(
+						_mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(SMIN - 1)), // Neighbors >= SMIN
+						_mm256_cmpgt_epi32(_mm256_set1_epi32(SMAX + 1), neighbor_sum)  // Neighbors <= SMAX
+					);
+
+					// Condition for birth: dead cells with BMIN <= neighbors <= BMAX become alive
+					__m256i dead_mask = _mm256_cmpeq_epi32(center, _mm256_setzero_si256()); // Mask for dead cells
+
+					__m256i birth_mask = _mm256_and_si256(
+						_mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(BMIN - 1)), // Neighbors >= BMIN
+						_mm256_cmpgt_epi32(_mm256_set1_epi32(BMAX + 1), neighbor_sum)  // Neighbors <= BMAX
+					);
+
+					// New state: live cells that survive OR dead cells that are born
+					__m256i new_state = _mm256_or_si256(
+						_mm256_and_si256(live_mask, survival_mask), // Surviving live cells
+						_mm256_and_si256(_mm256_and_si256(dead_mask, _mm256_set1_epi32(1)) , birth_mask)     // Newly born cells
+					);
+
+					_mm256_storeu_si256((__m256i *)&res[0], new_state);
+					for (int kk=0; kk<8; kk++){
+						dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj + kk] = res[kk];
+					}
+					// Store the new state back to the buffer
 				}
-				//printf("\n");
+		//		//printf("\n");
 			}
 			//printf("\n");
 
