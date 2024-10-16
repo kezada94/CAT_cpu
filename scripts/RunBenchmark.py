@@ -24,7 +24,7 @@ densities = [0.07, 0.15, 0.25, 0.50, 0.21, 0.22, 0.29, 0.23, 0.24, 0.25, 0.24, 0
 repeats = [32, 32, 32, 32, 16, 16, 16, 16, 8, 8,
             8,  8,  8,  8,  4,  4,  4,  4, 4, 4,
             4,  4,  4,  4,  2,  2,  2,  2, 2, 2]
-steps = 5
+steps = 15
 # 1: passed
 # 0: failed
 results = {}
@@ -38,8 +38,8 @@ for r, radius in enumerate(radiuses):
         print('make', '-j', '8', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
         subprocess.run(['make', '-j', '8', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
         for l, size in enumerate(sizes):
-            if l<17 or l>17:
-                continue
+            #if l<17 or l>17:
+            #    continue
             runs = np.zeros(repeats[l])
             for rep in range(repeats[l]):
                 print(f"    Running {rep}... size: {size}, method: {method}, steps: {steps}")
@@ -56,5 +56,6 @@ for r, radius in enumerate(radiuses):
                 res['var'] = np.var(runs)
                 res['std'] = np.std(runs)
                 res['stderr'] = res['std'] / np.sqrt(repeats[l])
+                res['PSE'] = res['stderr'] / res['time'] * 100.0
                 data.write(str(res) + '\n')
 
