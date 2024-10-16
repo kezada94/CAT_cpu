@@ -32,6 +32,7 @@ void CASolver::doStep()
 void CASolver::fillBoundaryConditions()
 {
     fillHorizontalBoundaryConditions();
+#pragma omp barrier
     fillVerticalBoundaryConditions();
 }
 
