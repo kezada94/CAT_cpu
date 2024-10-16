@@ -254,20 +254,18 @@ void AMXSolver::CAStepAlgorithm() {
 
 	int iterations = nWithHalo/64;
 	int chunk_size = (iterations + num_threads - 1) / num_threads;
+	//printf("cs %i, nwh %llu, iters: %i\n", chunk_size, nWithHalo, iterations);
 	int start = thread_id * chunk_size;
 	int end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
 
 
-	if ((thread_id + 1) * 64 > nWithHalo - 64*2)
+	if ((thread_id) >= iterations)
 	{
-		// printf("Thread %i is out of bounds\n", thread_id);
 		end = -1;
 	}
 
-
-
     //FIRST STEP: horizontal reduction
-    for (size_t iter = start; iter < end; iter++) {
+    for (int iter = start; iter < end; iter++) {
 		size_t i = iter*64;
 
         for (size_t j = 0; j < nWithHalo - 64*2; j+=64) {
@@ -350,7 +348,7 @@ void AMXSolver::CAStepAlgorithm() {
 	start = thread_id * chunk_size;
 	end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
     //for (int i = 0; i < nWithHalo - 64*2; i+=64) {
-	if ((thread_id + 1) * 64 > nWithHalo - 64*2)
+	if ((thread_id) >= iterations)
 	{
 		// printf("Thread %i is out of bounds\n", thread_id);
 		end = -1;

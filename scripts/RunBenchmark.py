@@ -35,8 +35,8 @@ for r, radius in enumerate(radiuses):
         print("Cleaning...")
         subprocess.run(['make', 'clean'], stdout=None, stderr=None, cwd="../")
         print(f"Compiling... RADIUS: {radius}")
-        print('make', '-j', '8', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
-        subprocess.run(['make', '-j', '8', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
+        print('make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
+        subprocess.run(['make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
         for l, size in enumerate(sizes):
             #if l<17 or l>17:
             #    continue
