@@ -253,16 +253,26 @@ void AMXSolver::CAStepAlgorithm() {
     _tile_loadd(6, pi_6B, 64);
 
 	int iterations = nWithHalo/64;
-	int chunk_size = iterations / num_threads;
+	int chunk_size = (iterations + num_threads - 1) / num_threads;
 	int start = thread_id * chunk_size;
-	int end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
+	int end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
+
+
+	if ((thread_id + 1) * 64 > nWithHalo - 64*2)
+	{
+		// printf("Thread %i is out of bounds\n", thread_id);
+		end = -1;
+	}
+
+
 
     //FIRST STEP: horizontal reduction
     for (size_t iter = start; iter < end; iter++) {
+		size_t i = iter*64;
+
         for (size_t j = 0; j < nWithHalo - 64*2; j+=64) {
             //take three continuous 16x16 blocks and load them into amx
 			//printf("%i,%i\n", i, j);
-			size_t i = iter*64;
 
 		    // tiles in C from 0,0 to 3,0 (first col)
 			for (int k = 0; k < 4; k++){
@@ -336,14 +346,20 @@ void AMXSolver::CAStepAlgorithm() {
 #pragma omp barrier
     //SECOND STEP: vertical reduction
 	iterations = (nWithHalo - 64*2)/64;
-	chunk_size = iterations / num_threads;
+	chunk_size = (iterations +num_threads-1)/ num_threads;
 	start = thread_id * chunk_size;
-	end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
+	end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
     //for (int i = 0; i < nWithHalo - 64*2; i+=64) {
+	if ((thread_id + 1) * 64 > nWithHalo - 64*2)
+	{
+		// printf("Thread %i is out of bounds\n", thread_id);
+		end = -1;
+	}
     for (int iter = start; iter < end; iter++) {
-        for (int j = 0; j < nWithHalo - 64*2; j+=64) {
-			size_t i = iter*64;
+		size_t i = iter*64;
             //take three continuous 16x16 blocks and load them into amx
+
+        for (int j = 0; j < nWithHalo - 64*2; j+=64) {
 			for (int k = 0; k < 4; k++){
             	_tile_zero(0);
 				_tile_loadd(7, &dataI[(i+16*k) * nWithHalo + j +64], nWithHalo);
@@ -464,9 +480,10 @@ void AMXSolver::fillHorizontalBoundaryConditions() {
     int thread_id = omp_get_thread_num();
 
 	int innerSize = dataDomain->getInnerHorizontalSize();
-	int chunk_size = innerSize / num_threads;
+	int chunk_size = (innerSize + num_threads-1) / num_threads;
 	int start = thread_id * chunk_size;
-	int end = (thread_id == num_threads - 1) ? innerSize : start + chunk_size;
+	//int end = (thread_id == num_threads - 1) ? innerSize : start + chunk_size;
+	int end = std::min(start + chunk_size, innerSize);  // Ensure 'end' does not exceed 'iterations'
 
 
     for (int h = 0; h < RADIUS; ++h) {
@@ -496,9 +513,10 @@ void AMXSolver::fillVerticalBoundaryConditions() {
     int thread_id = omp_get_thread_num();
 
 	int fullSize = dataDomain->getFullHorizontalSize();
-    int chunk_size = fullSize / num_threads;
+    int chunk_size = (fullSize + num_threads -1) / num_threads;
     int start = thread_id * chunk_size;
-    int end = (thread_id == num_threads - 1) ? fullSize : start + chunk_size;
+    //int end = (thread_id == num_threads - 1) ? fullSize : start + chunk_size;
+	int end = std::min(start + chunk_size, fullSize);  // Ensure 'end' does not exceed 'iterations'
 
 
     //for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
