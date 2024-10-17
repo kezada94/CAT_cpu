@@ -11,10 +11,11 @@ if len(sys.argv) != 2:
 
 nThreads = sys.argv[1]
 sizes = [1024 + 2048*i for i in range(30)]
-#methods = [0, 1, 2, 3]
-#method_names = ['CPU', 'AMX64', 'AMX16', "AVX"]
-methods = [1]
-method_names = ['AMX64']
+#sizes = [60414]
+methods = [3]
+method_names = ["AVX"]
+#methods = [1]
+#method_names = ['AMX64']
 radiuses = [i for i in range(1,17)]
 smin = [2, 7,  15, 40, 35, 49, 101,  163, 108, 122, 156, 170, 213, 245, 170, 170]
 smax = [3, 12, 23, 80, 59, 81, 201,  223, 181, 211, 265, 296, 364, 420, 296, 296]
@@ -38,8 +39,8 @@ for r, radius in enumerate(radiuses):
         print('make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
         subprocess.run(['make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
         for l, size in enumerate(sizes):
-            #if l<17 or l>17:
-            #    continue
+            if l<29 or l>29:
+                continue
             runs = np.zeros(repeats[l])
             for rep in range(repeats[l]):
                 print(f"    Running {rep}... size: {size}, method: {method}, steps: {steps}")

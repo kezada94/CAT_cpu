@@ -74,6 +74,16 @@
 #define SKYLAKE_SERVER                 0x50650
 #define BROADWELL_E                    0x406F0
 
+bool CPUpollThreadStatus = false;
+std::string CPUfilename;
+
+Rapl *rapl;
+
+int CPU_SAMPLE_MS = 100;
+
+
+pthread_t CPUpowerPollThread;
+
 
 Rapl::Rapl() {
 
@@ -91,6 +101,7 @@ Rapl::Rapl() {
 	printf("trying vendor units %u\n", vendor);
 	if (vendor == 0){
 		raw_value = read_msr(0, MSR_RAPL_POWER_UNIT);
+		printf("PWR UNIT %x\n", raw_value);
 	} else if (vendor == 1){
 		raw_value = read_msr(0, AMD_MSR_PWR_UNIT);
 	}
@@ -101,6 +112,7 @@ Rapl::Rapl() {
 	/* Read MSR_PKG_POWER_INFO Register */
 	if (vendor==0){
 		raw_value = read_msr(0, MSR_PKG_POWER_INFO);
+		printf("PWR INFO %x\n", raw_value);
 		thermal_spec_power = power_units * ((double)(raw_value & 0x7fff));
 		minimum_power = power_units * ((double)((raw_value >> 16) & 0x7fff));
 		maximum_power = power_units * ((double)((raw_value >> 32) & 0x7fff));
@@ -254,8 +266,8 @@ void Rapl::sample(int socket) {
 		next_state[socket]->pkg = read_msr(socket, MSR_PKG_ENERGY_STATUS) & max_int;
 		next_state[socket]->pp0 = read_msr(socket, MSR_PP0_ENERGY_STATUS) & max_int;
 		if (pp1_supported) {
-			next_state[socket]->pp1 = read_msr(socket, MSR_PP1_ENERGY_STATUS) & max_int;
-			next_state[socket]->dram = 0;
+			next_state[socket]->pp1 = 0;//read_msr(socket, MSR_PP1_ENERGY_STATUS) & max_int;
+			next_state[socket]->dram = read_msr(socket, MSR_DRAM_ENERGY_STATUS) & max_int;
 		} else {
 			next_state[socket]->pp1 = 0;
 			next_state[socket]->dram = read_msr(socket, MSR_DRAM_ENERGY_STATUS) & max_int;
@@ -491,4 +503,62 @@ int Rapl::get_n_sockets(){
 
     return count;
 
+}
+
+// Begin measuring CPU power
+void CPUPowerBegin(const char *alg, int ms){
+    CPU_SAMPLE_MS = ms;
+    CPUpollThreadStatus = true;
+    CPUfilename = std::string("power-") + std::string(alg) + std::string(".dat");
+    rapl = new Rapl();
+	int code = pthread_create(&CPUpowerPollThread, NULL, CPUpowerPollingFunc, (void*)NULL);
+	if (code){
+		fprintf(stderr,"Error - pthread_create() return code: %d\n", code);
+		exit(0);
+	}
+	usleep(1000*COOLDOWN_MS);
+}
+
+// Stop measuring CPU power
+void CPUPowerEnd(){
+    double ckWh = 3600000.0;
+	usleep(1000*COOLDOWN_MS);
+	CPUpollThreadStatus = false;
+	pthread_join(CPUpowerPollThread, 0);
+    //printf("\n\tTotal Energy: %f J\n\tAverage Power: %f W\n\tTime: %f\n\n", rapl->pkg_total_energy(), rapl->pkg_average_power(), rapl->total_time());
+    printf("\n\nSummary:\nCPU Avg. Power:       %f W\n", rapl->pkg_average_power());
+    printf("CPU Total Energy:     %f J = %f kWh\n", rapl->pkg_total_energy(), rapl->pkg_total_energy()/ckWh);
+    printf("CPU Total Time:       %f secs\n", rapl->total_time());
+    printf("\n");
+    printf("DRAM Avg. Power:      %f W\n", rapl->dram_average_power());
+    printf("DRAM Total Energy:    %f J = %f kWh\n", rapl->dram_total_energy(), rapl->dram_total_energy()/ckWh);
+    printf("\n");
+}
+
+
+
+// CPU power measure thread
+void* CPUpowerPollingFunc(void *ptr){
+    int timestep = 0;
+    double dt = 0.0, acctime = 0.0, accenergy = 0.0, power = 0.0;
+	FILE *fp = fopen(CPUfilename.c_str(), "w+");
+	//fprintf(fp, "%-15s %-15s %-15s %-15s %-15s %-15s\n", "#timestep", "power", "acc-energy", "avg-power", "dt", "acc-time");
+	while(CPUpollThreadStatus){
+        timestep++;
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
+		usleep(1000 * CPU_SAMPLE_MS);
+
+        // sample values
+		rapl->sample();
+
+		// Write current value of CPU PKG
+        fprintf(fp, "%-15i %-15f %-15f %-15f %-15f %-15f\n", timestep, rapl->pkg_current_power(), rapl->pkg_total_energy(), rapl->pkg_average_power(), rapl->current_time(), rapl->total_time());
+        printf("\r [CPU = %-10.5f (W)  DRAM = %-10.5f (W)]",
+                rapl->pkg_current_power(), 
+                rapl->dram_current_power());
+        fflush(stdout);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+	}
+    fclose(fp);
+	pthread_exit(0);
 }

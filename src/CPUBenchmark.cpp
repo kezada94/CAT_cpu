@@ -1,4 +1,5 @@
 #include "CPUBenchmark.h"
+#include "Rapl.h"
 
 CPUBenchmark::CPUBenchmark(CASolver *pSolver, int n, int pSteps, int pSeed, float pDensity, int pThreads)
 {
@@ -37,9 +38,20 @@ void CPUBenchmark::run()
         fDebug(1, solver->printCurrentState());
     }
 
+#ifdef MEASURE_POWER
+
+    std::string radiusStr = "AMX-radius-" + std::to_string(RADIUS);
+
+    // Call CPUPowerBegin with the correct string format
+    CPUPowerBegin(radiusStr.c_str(), 50);
+
+#endif
 
     doOneRun();
 
+#ifdef MEASURE_POWER
+    CPUPowerEnd();
+#endif
 
     lDebug(1, "Benchmark finished. Results:");
 
@@ -59,6 +71,8 @@ void CPUBenchmark::doOneRun()
 		if (tid == 0){
 			timer->start();
 		}
+		
+
 		solver->doSteps(steps);
 
 		#pragma omp barrier

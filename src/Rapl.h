@@ -14,6 +14,7 @@
 #define MAX_CPU 256
 #define MAX_SOCKETS 8
 
+#define COOLDOWN_MS  20
 struct rapl_state_t {
 	uint64_t pkg;
 	uint64_t pp0;
@@ -21,6 +22,13 @@ struct rapl_state_t {
 	uint64_t dram;
 	struct timeval tsc;
 };
+
+// CPU power measure functions
+void CPUPowerBegin(const char *alg, int ms);
+void CPUPowerEnd();
+
+// pthread functions
+void *CPUpowerPollingFunc(void *ptr);
 
 class Rapl {
 
