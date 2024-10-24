@@ -238,11 +238,17 @@ void AMXSolver16::CAStepAlgorithm() {
 	int num_threads = omp_get_num_threads();
     int thread_id = omp_get_thread_num();
 
-
 	int iterations = nWithHalo/16;
-	int chunk_size = iterations / num_threads;
+	int chunk_size = (iterations + num_threads - 1) / num_threads;
+	//printf("cs %i, nwh %llu, iters: %i\n", chunk_size, nWithHalo, iterations);
 	int start = thread_id * chunk_size;
-	int end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
+	int end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
+
+
+	if ((thread_id) >= iterations)
+	{
+		end = -1;
+	}
 
     //FIRST STEP: horizontal reduction
     for (size_t iter = start; iter < end; iter++) {
@@ -302,11 +308,16 @@ void AMXSolver16::CAStepAlgorithm() {
         }
     }
 #pragma omp barrier
-    //SECOND STEP: vertical reduction
 	iterations = (nWithHalo - 16*2)/16;
-	chunk_size = iterations / num_threads;
+	chunk_size = (iterations +num_threads-1)/ num_threads;
 	start = thread_id * chunk_size;
-	end = (thread_id == num_threads - 1) ? iterations : start + chunk_size;
+	end = std::min(start + chunk_size, iterations);  // Ensure 'end' does not exceed 'iterations'
+    //for (int i = 0; i < nWithHalo - 64*2; i+=64) {
+	if ((thread_id) >= iterations)
+	{
+		// printf("Thread %i is out of bounds\n", thread_id);
+		end = -1;
+	}
 
     for (int iter = start; iter < end; iter++) {
         for (int j = 0; j < nWithHalo - 16*2; j+=16) {
