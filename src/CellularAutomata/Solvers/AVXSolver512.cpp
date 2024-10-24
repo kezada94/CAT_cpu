@@ -58,6 +58,8 @@ void AVXSolver512::CAStepAlgorithm()
     {
         for (int j = 0; j < dataDomain->getInnerHorizontalSize(); j += 8)
         {
+            #ifdef USE_AVX512
+
             // Load 8 elements from the center position
             __m512i center = _mm512_loadu_si512((__m512i *)&data[(i+halo) * dataDomain->getFullHorizontalSize() + j + halo]);
             __m512i neighbor_sum = _mm512_setzero_si512(); // Initialize sum for 32-bit integers
@@ -104,6 +106,7 @@ void AVXSolver512::CAStepAlgorithm()
 
             // Store the new state back to the buffer
             _mm512_storeu_si512((__m512i *)((dataDomainBuffer->getData() + (i+halo) * dataDomainBuffer->getFullHorizontalSize() + j+halo)), new_state);
+        #endif
         }
     }
 }

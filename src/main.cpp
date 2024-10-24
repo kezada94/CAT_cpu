@@ -97,7 +97,7 @@ void defineArguments(argparse::ArgumentParser &program)
         return std::stoi(value);
     });
     program.add_argument("solver")
-        .help("Solver to use:\n\t0 - CPU OpenMP\n\t1 - AMX64 \n\t2 - AMX16 \n\t3 - AVX\n\t4 - AMX512\n\t5 - AVX512 ")
+        .help("Solver to use:\n\t0 - CPU OpenMP\n\t1 - AMX64 \n\t2 - AMX16 \n\t3 - AVX\n\t4 - AMX512\n\t5 - AVX512\n\t6 - AMX16x512 ")
         .action([](const std::string &value) { return std::stoi(value); });
 
     program.add_argument("steps").help("Number of steps of the CA simulation").action([](const std::string &value) {

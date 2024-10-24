@@ -100,6 +100,22 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
         lDebug(1, "Solver of type AVXSOLVER512 created");
         break;
     }
+    case 6:
+    {
+        lDebug(1, "Creating solver of type AMXSolver16x512");
+        CPUAllocator<uint8_t> *cpuAllocator = new CPUAllocator<uint8_t>();
+        Allocator<uint8_t> *allocator = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocator);
+        CADataDomain<uint8_t> *dataDomain = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 16);
+        dataDomain->allocate();
+
+        CADataDomain<uint8_t> *dataDomainBuffer = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 16);
+        dataDomainBuffer->allocate();
+
+        solver = new AMXSolver16x512(dataDomain, dataDomainBuffer, nThreads);
+        lDebug(1, "Solver of type AMXSolver16x512 created");
+
+        break;
+    }
     }
     return solver;
 }

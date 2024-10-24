@@ -393,12 +393,8 @@ void AMXSolver512::CAStepAlgorithm() {
 						cente[kk] = data[(i+ii + 64)*nWithHalo + j + 64 + jj + kk];
 						neigh[kk] = buffer[thread_id*64*64 + (jj+kk)*64+ii] - cente[kk];
 					}
-            // 		uint8_t cellValue = data[(i+ii + 64)*nWithHalo + j + 64 + jj];
-            // 		int liveNeighbors = buffer[thread_id*64*64 + jj*64+ii] - cellValue;
+#ifdef USE_AVX512
 
-            // 	    uint8_t result = cellValue * transitionFunction(liveNeighbors, SMIN, SMAX) + (1 - cellValue) * transitionFunction(liveNeighbors, BMIN, BMAX);
-		//			dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj] = result;
-					//printf("%i ", data[(i+ii + 64)*nWithHalo + j + 64 + jj]);
 					__m512i center = _mm512_loadu_si512((__m512i *)&cente[0]);
 					__m512i neighbor_sum = _mm512_loadu_si512((__m512i *)&neigh[0]);
 
@@ -427,6 +423,7 @@ void AMXSolver512::CAStepAlgorithm() {
 					for (int kk=0; kk<16; kk++){
 						dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj + kk] = res[kk];
 					}
+#endif
 					// Store the new state back to the buffer
 				}
 		//		//printf("\n");

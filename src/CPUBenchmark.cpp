@@ -40,7 +40,7 @@ void CPUBenchmark::run()
 
 #ifdef MEASURE_POWER
 
-    std::string radiusStr = "AMX-radius-" + std::to_string(RADIUS);
+    std::string radiusStr = "AMX-radius-" + std::to_string(RADIUS) + "-threads-" + std::to_string(threads);
 
     // Call CPUPowerBegin with the correct string format
     CPUPowerBegin(radiusStr.c_str(), 50);

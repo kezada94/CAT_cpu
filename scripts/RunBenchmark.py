@@ -12,8 +12,10 @@ if len(sys.argv) != 2:
 nThreads = sys.argv[1]
 sizes = [1024 + 2048*i for i in range(30)]
 #sizes = [60414]
-methods = [4]
-method_names = ["AMX512"]
+methods = [1, 2, 4, 6]
+method_names = ["AMX", "AMX16", "AMX512", "AMX16x512"]
+use_avx512 = ["NO", "NO", "USE_AVX512", "USE_AVX512"]
+
 #methods = [1]
 #method_names = ['AMX64']
 radiuses = [i for i in range(1,17)]
@@ -37,7 +39,7 @@ for r, radius in enumerate(radiuses):
         subprocess.run(['make', 'clean'], stdout=None, stderr=None, cwd="../")
         print(f"Compiling... RADIUS: {radius}")
         print('make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
-        subprocess.run(['make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
+        subprocess.run(['make', '-j', "-D"+use_avx512[k], 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
         for l, size in enumerate(sizes):
             runs = np.zeros(repeats[l])
             for rep in range(repeats[l]):
@@ -49,7 +51,7 @@ for r, radius in enumerate(radiuses):
                     runs[rep] = float(result)
                 else:
                     exit()
-            with open("../data/benchmark_results-"+str(method_names[k])+".txt","a") as data:
+            with open("../data/benchmark_results-"+str(method_names[k])+ "-t=" + str(nThreads) + ".txt","a") as data:
                 res = {'radius' : radius, 'method' : method, 'size' : size}
                 res['time'] = np.average(runs)
                 res['var'] = np.var(runs)
