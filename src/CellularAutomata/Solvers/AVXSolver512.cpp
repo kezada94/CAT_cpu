@@ -51,6 +51,7 @@ void AVXSolver512::preamble()
 
 void AVXSolver512::CAStepAlgorithm()
 {
+            #ifdef USE_AVX512
     int* data = dataDomain->getData();
     size_t halo = dataDomain->getHorizontalHaloSize();
 #pragma omp for
@@ -58,7 +59,6 @@ void AVXSolver512::CAStepAlgorithm()
     {
         for (int j = 0; j < dataDomain->getInnerHorizontalSize(); j += 8)
         {
-            #ifdef USE_AVX512
 
             // Load 8 elements from the center position
             __m512i center = _mm512_loadu_si512((__m512i *)&data[(i+halo) * dataDomain->getFullHorizontalSize() + j + halo]);
@@ -106,9 +106,9 @@ void AVXSolver512::CAStepAlgorithm()
 
             // Store the new state back to the buffer
             _mm512_storeu_si512((__m512i *)((dataDomainBuffer->getData() + (i+halo) * dataDomainBuffer->getFullHorizontalSize() + j+halo)), new_state);
-        #endif
         }
     }
+        #endif
 }
 int AVXSolver512::countAliveNeighbors(int y, int x)
 {

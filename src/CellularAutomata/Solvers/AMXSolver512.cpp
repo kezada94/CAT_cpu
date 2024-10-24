@@ -236,6 +236,8 @@ void AMXSolver512::preamble()
 }
 
 void AMXSolver512::CAStepAlgorithm() {
+#ifdef USE_AVX512
+
     uint8_t* data = dataDomain->getData();
     uint8_t* dataBuffer = dataDomainBuffer->getData();
     uint8_t* dataI = dataDomainIntermediate->getData();
@@ -393,7 +395,6 @@ void AMXSolver512::CAStepAlgorithm() {
 						cente[kk] = data[(i+ii + 64)*nWithHalo + j + 64 + jj + kk];
 						neigh[kk] = buffer[thread_id*64*64 + (jj+kk)*64+ii] - cente[kk];
 					}
-#ifdef USE_AVX512
 
 					__m512i center = _mm512_loadu_si512((__m512i *)&cente[0]);
 					__m512i neighbor_sum = _mm512_loadu_si512((__m512i *)&neigh[0]);
@@ -423,7 +424,6 @@ void AMXSolver512::CAStepAlgorithm() {
 					for (int kk=0; kk<16; kk++){
 						dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj + kk] = res[kk];
 					}
-#endif
 					// Store the new state back to the buffer
 				}
 		//		//printf("\n");
@@ -444,6 +444,8 @@ void AMXSolver512::CAStepAlgorithm() {
     //         dataDomainBuffer->setInnerElementAt(i, j, result);
     //     }
     // }
+#endif
+
 }
 
 int AMXSolver512::countAliveNeighbors(int y, int x) {
