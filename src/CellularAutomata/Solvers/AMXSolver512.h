@@ -2,6 +2,7 @@
 #pragma once
 
 #include "CellularAutomata/Solvers/CASolver.h"
+#include "CellularAutomata/Solvers/AMXSolver.h"
 #include "Memory/CADataDomain.h"
 #include "Memory/CAStateGenerator.h"
 
@@ -14,15 +15,6 @@
 #include <stdbool.h>
 
 
-//Define tile config data structure
-typedef struct __tile_config
-{
-  uint8_t palette_id;
-  uint8_t start_row;
-  uint8_t reserved_0[14];
-  uint16_t colsb[16];
-  uint8_t rows[16];
-} __tilecfg;
 
 #define ARCH_GET_XCOMP_PERM     0x1022
 #define ARCH_REQ_XCOMP_PERM     0x1023

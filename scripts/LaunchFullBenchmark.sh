@@ -21,5 +21,5 @@ python3 RunBenchmark-NonAMX.py $NUM_THREADS
 python3 RunBenchmark.py $total_threads
 python3 RunBenchmark-NonAMX.py $total_threads
 
-python3 EnergyBenchmark.py $NUM_THREADS
-python3 EnergyBenchmark.py $total_threads
+sudo python3 EnergyBenchmark.py $NUM_THREADS
+sudo python3 EnergyBenchmark.py $total_threads
