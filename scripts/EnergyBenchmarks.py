@@ -1,7 +1,5 @@
 import numpy as np
-import os
 import subprocess
-import json
 import sys
 
 
@@ -12,8 +10,8 @@ if len(sys.argv) != 2:
 nThreads = sys.argv[1]
 sizes = [1024 + 2048*i for i in range(30)]
 #sizes = [60414]
-methods = [1]
-method_names = ["AMX64"]
+methods = [4]
+method_names = ["AMX512"]
 #methods = [1]
 #method_names = ['AMX64']
 radiuses = [i for i in range(1,17)]

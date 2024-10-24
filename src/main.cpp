@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 {
     MainArgs args;
     argparse::ArgumentParser program("CAT: Celular Automata on Tensor Cores", "1.0.0", argparse::default_arguments::all,
-                                     true);
+                                    true);
     defineArguments(program);
     try
     {
@@ -97,9 +97,7 @@ void defineArguments(argparse::ArgumentParser &program)
         return std::stoi(value);
     });
     program.add_argument("solver")
-        .help("Solver to use:\n\t0 - BASE: Global Memory\n\t1 - SHARED: Shared /memory\n\t2 - CAT: Fast Tensor "
-              "Core\n\t3 - COARSE: Thread Coarsening\n\t4 - MCELL: Multiple cells per thread\n\t5 - PACK: uint64 "
-              "Packet Coding")
+        .help("Solver to use:\n\t0 - CPU OpenMP\n\t1 - AMX64 \n\t2 - AMX16 \n\t3 - AVX\n\t4 - AMX512\n\t5 - AVX512 ")
         .action([](const std::string &value) { return std::stoi(value); });
 
     program.add_argument("steps").help("Number of steps of the CA simulation").action([](const std::string &value) {

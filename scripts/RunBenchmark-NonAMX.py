@@ -12,8 +12,8 @@ if len(sys.argv) != 2:
 nThreads = sys.argv[1]
 sizes = [1024 + 2048*i for i in range(30)]
 #sizes = [60414]
-methods = [4]
-method_names = ["AMX512"]
+methods = [0, 5]
+method_names = ["OMP", "AVX512"]
 #methods = [1]
 #method_names = ['AMX64']
 radiuses = [i for i in range(1,17)]
@@ -31,7 +31,10 @@ steps = 15
 results = {}
 auxdict = {}
 
+radii_to_keep = [1, 2, 4, 8, 16]
 for r, radius in enumerate(radiuses):
+    if radius not in radii_to_keep:
+        continue
     for k, method in enumerate(methods):
         print("Cleaning...")
         subprocess.run(['make', 'clean'], stdout=None, stderr=None, cwd="../")
@@ -39,6 +42,8 @@ for r, radius in enumerate(radiuses):
         print('make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r]))
         subprocess.run(['make', '-j', 'RADIUS='+str(radius), 'SMIN='+str(smin[r]), 'SMAX='+str(smax[r]), 'BMIN='+str(bmin[r]), 'BMAX='+str(bmax[r])], stdout=None, cwd="../")
         for l, size in enumerate(sizes):
+            if size < sizes[-1]:
+                continue
             runs = np.zeros(repeats[l])
             for rep in range(repeats[l]):
                 print(f"    Running {rep}... size: {size}, method: {method}, steps: {steps}")

@@ -1,8 +1,8 @@
 #include "CellularAutomata/CADataPrinter.h"
-#include "CellularAutomata/Solvers/AMXSolver.h"
+#include "CellularAutomata/Solvers/AMXSolver512.h"
 #include "Memory/Allocators/CPUAllocator.h"
 
-AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer, int nThreads) {
+AMXSolver512::AMXSolver512(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domainBuffer, int nThreads) {
     dataDomain = domain;
     dataDomainBuffer = domainBuffer;
 
@@ -25,7 +25,7 @@ AMXSolver::AMXSolver(CADataDomain<uint8_t>* domain, CADataDomain<uint8_t>* domai
     fillTridiag();
 }
 
-void AMXSolver::setupAMX() {
+void AMXSolver512::setupAMX() {
 	tile_config = new __tile_config();
     tile_config->palette_id = 1;
     tile_config->start_row = 0;
@@ -60,7 +60,7 @@ void AMXSolver::setupAMX() {
 }
 
 
-void AMXSolver::fillTridiag() {
+void AMXSolver512::fillTridiag() {
 	uint8_t* data = (uint8_t*) malloc(64*16*12*sizeof(uint8_t));
 	pi_1  = &data[64*16*0];
 	pi_2  = &data[64*16*1];
@@ -199,21 +199,21 @@ void AMXSolver::fillTridiag() {
 
 }
 
-void AMXSolver::copyCurrentStateToHostVisibleData() {
+void AMXSolver512::copyCurrentStateToHostVisibleData() {
 	lDebug(1, "%llu\n", dataDomain->getTotalSize());
     for (int i = 0; i < dataDomain->getTotalSize(); ++i) {
         uint8_t value = dataDomain->getElementAt(i);
         hostVisibleData->setElementAt(i, (int)value);
     }
 }
-void AMXSolver::copyHostVisibleDataToCurrentState() {
+void AMXSolver512::copyHostVisibleDataToCurrentState() {
     for (int i = 0; i < hostVisibleData->getTotalSize(); ++i) {
         int value = hostVisibleData->getElementAt(i);
         dataDomain->setElementAt(i, value);
     }
 }
 
-void AMXSolver::swapPointers() {
+void AMXSolver512::swapPointers() {
 	if (omp_get_thread_num() == 0){
 		CADataDomain<uint8_t>* temp = dataDomain;
 		dataDomain = dataDomainBuffer;
@@ -221,11 +221,11 @@ void AMXSolver::swapPointers() {
 	}
 }
 
-uint8_t AMXSolver::transitionFunction(int k, int a, int b) {
+uint8_t AMXSolver512::transitionFunction(int k, int a, int b) {
     return (1 - (((k - a) >> 31) & 0x1)) * (1 - (((b - k) >> 31) & 0x1));
 }
 
-void AMXSolver::preamble()
+void AMXSolver512::preamble()
 {
 	_tile_loadd(1, pi_1B, 64);
 	_tile_loadd(2, pi_2B, 64);
@@ -235,7 +235,7 @@ void AMXSolver::preamble()
 	_tile_loadd(6, pi_6B, 64);
 }
 
-void AMXSolver::CAStepAlgorithm() {
+void AMXSolver512::CAStepAlgorithm() {
     uint8_t* data = dataDomain->getData();
     uint8_t* dataBuffer = dataDomainBuffer->getData();
     uint8_t* dataI = dataDomainIntermediate->getData();
@@ -385,11 +385,11 @@ void AMXSolver::CAStepAlgorithm() {
 			}
 
 			for (int ii=0; ii<64; ii++){
-				for (int jj=0; jj<64; jj+=8){
-					int cente[8];
-					int neigh[8];
-					int res[8];
-					for (int kk=0; kk<8; kk++){
+				for (int jj=0; jj<64; jj+=16){
+					int cente[16];
+					int neigh[16];
+					int res[16];
+					for (int kk=0; kk<16; kk++){
 						cente[kk] = data[(i+ii + 64)*nWithHalo + j + 64 + jj + kk];
 						neigh[kk] = buffer[thread_id*64*64 + (jj+kk)*64+ii] - cente[kk];
 					}
@@ -399,32 +399,32 @@ void AMXSolver::CAStepAlgorithm() {
             // 	    uint8_t result = cellValue * transitionFunction(liveNeighbors, SMIN, SMAX) + (1 - cellValue) * transitionFunction(liveNeighbors, BMIN, BMAX);
 		//			dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj] = result;
 					//printf("%i ", data[(i+ii + 64)*nWithHalo + j + 64 + jj]);
-					__m256i center = _mm256_loadu_si256((__m256i *)&cente[0]);
-					__m256i neighbor_sum = _mm256_loadu_si256((__m256i *)&neigh[0]);
+					__m512i center = _mm512_loadu_si512((__m512i *)&cente[0]);
+					__m512i neighbor_sum = _mm512_loadu_si512((__m512i *)&neigh[0]);
 
-					__m256i live_mask = center; // Mask for live cells (center > 0)
+					__m512i live_mask = center; // Mask for live cells (center > 0)
 
-					__m256i survival_mask = _mm256_and_si256(
-						_mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(SMIN - 1)), // Neighbors >= SMIN
-						_mm256_cmpgt_epi32(_mm256_set1_epi32(SMAX + 1), neighbor_sum)  // Neighbors <= SMAX
+					__m512i survival_mask = _mm512_and_si512(
+						_mm512_cmpgt_epi32(neighbor_sum, _mm512_set1_epi32(SMIN - 1)), // Neighbors >= SMIN
+						_mm512_cmpgt_epi32(_mm512_set1_epi32(SMAX + 1), neighbor_sum)  // Neighbors <= SMAX
 					);
 
 					// Condition for birth: dead cells with BMIN <= neighbors <= BMAX become alive
-					__m256i dead_mask = _mm256_cmpeq_epi32(center, _mm256_setzero_si256()); // Mask for dead cells
+					__m512i dead_mask = _mm512_cmpeq_epi32(center, _mm512_setzero_si512()); // Mask for dead cells
 
-					__m256i birth_mask = _mm256_and_si256(
-						_mm256_cmpgt_epi32(neighbor_sum, _mm256_set1_epi32(BMIN - 1)), // Neighbors >= BMIN
-						_mm256_cmpgt_epi32(_mm256_set1_epi32(BMAX + 1), neighbor_sum)  // Neighbors <= BMAX
+					__m512i birth_mask = _mm512_and_si512(
+						_mm512_cmpgt_epi32(neighbor_sum, _mm512_set1_epi32(BMIN - 1)), // Neighbors >= BMIN
+						_mm512_cmpgt_epi32(_mm512_set1_epi32(BMAX + 1), neighbor_sum)  // Neighbors <= BMAX
 					);
 
 					// New state: live cells that survive OR dead cells that are born
-					__m256i new_state = _mm256_or_si256(
-						_mm256_and_si256(live_mask, survival_mask), // Surviving live cells
-						_mm256_and_si256(_mm256_and_si256(dead_mask, _mm256_set1_epi32(1)) , birth_mask)     // Newly born cells
+					__m512i new_state = _mm512_or_si512(
+						_mm512_and_si512(live_mask, survival_mask), // Surviving live cells
+						_mm512_and_si512(_mm512_and_si512(dead_mask, _mm512_set1_epi32(1)) , birth_mask)     // Newly born cells
 					);
 
-					_mm256_storeu_si256((__m256i *)&res[0], new_state);
-					for (int kk=0; kk<8; kk++){
+					_mm512_storeu_si512((__m512i *)&res[0], new_state);
+					for (int kk=0; kk<16; kk++){
 						dataBuffer[(i+ii + 64)*nWithHalo + j + 64 + jj + kk] = res[kk];
 					}
 					// Store the new state back to the buffer
@@ -449,7 +449,7 @@ void AMXSolver::CAStepAlgorithm() {
     // }
 }
 
-int AMXSolver::countAliveNeighbors(int y, int x) {
+int AMXSolver512::countAliveNeighbors(int y, int x) {
     int aliveNeighbors = 0;
 
     for (int i = -RADIUS; i <= RADIUS; ++i) {
@@ -463,7 +463,7 @@ int AMXSolver::countAliveNeighbors(int y, int x) {
     return aliveNeighbors;
 }
 
-void AMXSolver::fillHorizontalBoundaryConditions() {
+void AMXSolver512::fillHorizontalBoundaryConditions() {
 
     //for (int h = 0; h < dataDomain->getHorizontalHaloSize(); ++h) {
 	int num_threads = omp_get_num_threads();
@@ -497,7 +497,7 @@ void AMXSolver::fillHorizontalBoundaryConditions() {
     }
 }
 
-void AMXSolver::fillVerticalBoundaryConditions() {
+void AMXSolver512::fillVerticalBoundaryConditions() {
 
 	int num_threads = omp_get_num_threads();
     int thread_id = omp_get_thread_num();

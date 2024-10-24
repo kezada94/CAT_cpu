@@ -4,6 +4,8 @@
 #include "CellularAutomata/Solvers/AMXSolver.h"
 #include "CellularAutomata/Solvers/AVXSolver.h"
 #include "CellularAutomata/Solvers/AMXSolver16.h"
+#include "CellularAutomata/Solvers/AMXSolver512.h"
+#include "CellularAutomata/Solvers/AVXSolver512.h"
 #include "Debug.h"
 #include "Defines.h"
 #include "Memory/Allocators/CPUAllocator.h"

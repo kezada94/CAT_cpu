@@ -59,14 +59,45 @@ CASolver *CASolverFactory::createSolver(int SOLVER_CODE, int deviceId, int fullH
     {
         CPUAllocator<int> *cpuAllocator = new CPUAllocator<int>();
         Allocator<int> *allocator = reinterpret_cast<Allocator<int> *>(cpuAllocator);
-        CADataDomain<int> *dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+        CADataDomain<int> *dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, 16);
         dataDomain->allocate();
 
-        CADataDomain<int> *dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, horizontalHaloSize);
+        CADataDomain<int> *dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, 16);
         dataDomainBuffer->allocate();
 
         solver = new AVXSolver(dataDomain, dataDomainBuffer);
         lDebug(1, "Solver of type AVXSOLVER created");
+        break;
+    }
+    case 4:
+    {
+        lDebug(1, "Creating solver of type AMXSolver512");
+        CPUAllocator<uint8_t> *cpuAllocator = new CPUAllocator<uint8_t>();
+        Allocator<uint8_t> *allocator = reinterpret_cast<Allocator<uint8_t> *>(cpuAllocator);
+        CADataDomain<uint8_t> *dataDomain = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 64);
+        dataDomain->allocate();
+
+        CADataDomain<uint8_t> *dataDomainBuffer = new CADataDomain<uint8_t>(allocator, fullHorizontalSize, 64);
+        dataDomainBuffer->allocate();
+
+        solver = new AMXSolver512(dataDomain, dataDomainBuffer, nThreads);
+        lDebug(1, "Solver of type AMXSolver512 created");
+
+        break;
+    }
+
+    case 5:
+    {
+        CPUAllocator<int> *cpuAllocator = new CPUAllocator<int>();
+        Allocator<int> *allocator = reinterpret_cast<Allocator<int> *>(cpuAllocator);
+        CADataDomain<int> *dataDomain = new CADataDomain<int>(allocator, fullHorizontalSize, 16);
+        dataDomain->allocate();
+
+        CADataDomain<int> *dataDomainBuffer = new CADataDomain<int>(allocator, fullHorizontalSize, 16);
+        dataDomainBuffer->allocate();
+
+        solver = new AVXSolver512(dataDomain, dataDomainBuffer);
+        lDebug(1, "Solver of type AVXSOLVER512 created");
         break;
     }
     }
